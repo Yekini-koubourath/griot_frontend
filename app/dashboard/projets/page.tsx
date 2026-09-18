@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { Suspense ,useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import axios from "@/lib/axios";
@@ -60,7 +60,7 @@ type ProjectForm = {
    PAGE
 ========================================================= */
 
-export default function ProjetsPage() {
+function ProjetsPageContent() {
   const searchParams = useSearchParams();
 
   const [projects, setProjects] = useState<Project[]>([]);
@@ -2209,5 +2209,21 @@ function StatusBadge({ status }: { status: ProjectStatus }) {
       {item.icon}
       {status}
     </span>
+  );
+}function LoadingPage() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50">
+      <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
+        Chargement...
+      </div>
+    </div>
+  );
+}
+
+export default function ProjetsPage() {
+  return (
+    <Suspense fallback={<LoadingPage />}>
+      <ProjetsPageContent />
+    </Suspense>
   );
 }
