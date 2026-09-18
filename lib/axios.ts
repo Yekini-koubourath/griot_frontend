@@ -1,13 +1,5 @@
 import Axios from "axios";
 
-const getCookie = (name: string) => {
-  if (typeof document === "undefined") return null;
-
-  const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
-
-  return match ? decodeURIComponent(match[1]) : null;
-};
-
 const clearStaleSessionCookies = () => {
   if (typeof document === "undefined") return;
 
@@ -22,13 +14,18 @@ const clearStaleSessionCookies = () => {
 
 const axios = Axios.create({
   baseURL: process.env.NEXT_PUBLIC_BACKEND_URL,
+
   headers: {
     "X-Requested-With": "XMLHttpRequest",
     Accept: "application/json",
   },
+
   withCredentials: true,
+
   withXSRFToken: true,
+
   xsrfCookieName: "XSRF-TOKEN",
+
   xsrfHeaderName: "X-XSRF-TOKEN",
 });
 
@@ -36,16 +33,12 @@ axios.interceptors.request.use(async (config) => {
   const method = config.method?.toLowerCase() ?? "";
 
   if (["post", "put", "patch", "delete"].includes(method)) {
-    const token = getCookie("XSRF-TOKEN");
-
-    if (!token) {
-      await axios.get("/sanctum/csrf-cookie");
-    }
-
-    const freshToken = getCookie("XSRF-TOKEN");
-    if (freshToken) {
-      config.headers = config.headers ?? {};
-      config.headers["X-XSRF-TOKEN"] = freshToken;
+    try {
+      await axios.get("/sanctum/csrf-cookie", {
+        withCredentials: true,
+      });
+    } catch (error) {
+      console.error("Erreur récupération CSRF :", error);
     }
   }
 
@@ -54,18 +47,23 @@ axios.interceptors.request.use(async (config) => {
 
 axios.interceptors.response.use(
   (response) => response,
+
   async (error) => {
-    const shouldRetryCsrf = error.response?.status === 419;
+    const shouldRetryCsrf =
+      error.response?.status === 419 &&
+      !error.config?.__isRetry;
 
-    if (shouldRetryCsrf && !error.config.__isRetry) {
+    if (shouldRetryCsrf) {
       error.config.__isRetry = true;
-      await axios.get("/sanctum/csrf-cookie");
 
-      const token = getCookie("XSRF-TOKEN");
-      if (token) {
-        error.config.headers = error.config.headers ?? {};
-        error.config.headers["X-XSRF-TOKEN"] = token;
+      try {
+        await axios.get("/sanctum/csrf-cookie", {
+          withCredentials: true,
+        });
+
         return axios(error.config);
+      } catch {
+        return Promise.reject(error);
       }
     }
 
@@ -74,4 +72,5 @@ axios.interceptors.response.use(
 );
 
 export { clearStaleSessionCookies };
+
 export default axios;
