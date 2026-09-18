@@ -1,9 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, CreditCard, Smartphone, Landmark, Loader2 } from "lucide-react";
+import {
+  ChevronLeft,
+  CreditCard,
+  Smartphone,
+  Landmark,
+  Loader2,
+} from "lucide-react";
 import axios from "@/lib/axios";
 
 type Plan = {
@@ -31,27 +37,50 @@ const MODES_PAIEMENT = [
   { code: "virement", label: "Virement", icon: Landmark },
 ];
 
-const OPERATEURS_MOBILE_MONEY = ["MTN Mobile Money", "Moov Money", "Orange Money", "Wave"];
+const OPERATEURS_MOBILE_MONEY = [
+  "MTN Mobile Money",
+  "Moov Money",
+  "Orange Money",
+  "Wave",
+];
 
-export default function ValiderAbonnementPage() {
+function ValiderAbonnementContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const planId = searchParams.get("plan");
   const devise = searchParams.get("devise") || "XOF";
-  const dureeUnite = (searchParams.get("duree_unite") || "mois") as "jour" | "mois" | "annee";
+
+  const dureeUnite = (searchParams.get("duree_unite") ||
+    "mois") as "jour" | "mois" | "annee";
 
   const [plan, setPlan] = useState<Plan | null>(null);
   const [loadingPlan, setLoadingPlan] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
-  const [quantite, setQuantite] = useState(QUANTITE_LIMITS[dureeUnite].min);
+  const [quantite, setQuantite] = useState(
+    QUANTITE_LIMITS[dureeUnite].min,
+  );
+
   const [modePaiement, setModePaiement] = useState("");
   const [referencePaiement, setReferencePaiement] = useState("");
 
-  const [carte, setCarte] = useState({ titulaire: "", numero: "", expiration: "" });
-  const [mobileMoney, setMobileMoney] = useState({ operateur: "", telephone: "" });
-  const [virement, setVirement] = useState({ banque: "", titulaire: "", iban: "" });
+  const [carte, setCarte] = useState({
+    titulaire: "",
+    numero: "",
+    expiration: "",
+  });
+
+  const [mobileMoney, setMobileMoney] = useState({
+    operateur: "",
+    telephone: "",
+  });
+
+  const [virement, setVirement] = useState({
+    banque: "",
+    titulaire: "",
+    iban: "",
+  });
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -65,10 +94,12 @@ export default function ValiderAbonnementPage() {
 
     const loadPlan = async () => {
       setLoadingPlan(true);
+
       try {
         const response = await axios.get(
           `/api/plans/${planId}?devise=${devise}&duree_unite=${dureeUnite}`,
         );
+
         setPlan(response.data.plan ?? null);
       } catch (error) {
         console.error("Erreur chargement du plan :", error);
@@ -84,35 +115,56 @@ export default function ValiderAbonnementPage() {
   useEffect(() => {
     setQuantite((q) => {
       const { min, max } = QUANTITE_LIMITS[dureeUnite];
-      if (Number.isNaN(q)) return min;
+
+      if (Number.isNaN(q)) {
+        return min;
+      }
+
       return Math.min(Math.max(q, min), max);
     });
   }, [dureeUnite]);
 
-  const symbole = devise === "XOF" ? "FCFA" : devise === "USD" ? "$" : "€";
-  const uniteLabelCourt = (u: string) => (u === "jour" ? "j" : u === "annee" ? "an" : "mois");
+  const uniteLabelCourt = (u: string) =>
+    u === "jour" ? "j" : u === "annee" ? "an" : "mois";
 
   const clampQuantite = (value: number) => {
     const { min, max } = QUANTITE_LIMITS[dureeUnite];
-    if (Number.isNaN(value)) return min;
+
+    if (Number.isNaN(value)) {
+      return min;
+    }
+
     return Math.min(Math.max(value, min), max);
   };
 
   const buildDetailsPaiement = () => {
     if (modePaiement === "carte") {
       const digitsOnly = carte.numero.replace(/\D/g, "");
+
       return {
         titulaire: carte.titulaire,
-        numero_masque: digitsOnly ? `**** **** **** ${digitsOnly.slice(-4)}` : "",
+        numero_masque: digitsOnly
+          ? `**** **** **** ${digitsOnly.slice(-4)}`
+          : "",
         expiration: carte.expiration,
       };
     }
+
     if (modePaiement === "mobile_money") {
-      return { operateur: mobileMoney.operateur, telephone: mobileMoney.telephone };
+      return {
+        operateur: mobileMoney.operateur,
+        telephone: mobileMoney.telephone,
+      };
     }
+
     if (modePaiement === "virement") {
-      return { banque: virement.banque, titulaire: virement.titulaire, iban: virement.iban };
+      return {
+        banque: virement.banque,
+        titulaire: virement.titulaire,
+        iban: virement.iban,
+      };
     }
+
     return {};
   };
 
@@ -124,25 +176,39 @@ export default function ValiderAbonnementPage() {
         /^\d{2}\/\d{2}$/.test(carte.expiration)
       );
     }
+
     if (modePaiement === "mobile_money") {
-      return mobileMoney.operateur.length > 0 && mobileMoney.telephone.trim().length >= 8;
+      return (
+        mobileMoney.operateur.length > 0 &&
+        mobileMoney.telephone.trim().length >= 8
+      );
     }
+
     if (modePaiement === "virement") {
-      return virement.banque.trim().length > 0 && virement.iban.trim().length > 0;
+      return (
+        virement.banque.trim().length > 0 &&
+        virement.iban.trim().length > 0
+      );
     }
+
     return false;
   };
 
   const handleSubscribe = async () => {
-    if (!plan) return;
+    if (!plan) {
+      return;
+    }
 
     if (!plan.est_gratuit) {
       if (!modePaiement) {
         setErrorMessage("Veuillez choisir un mode de paiement.");
         return;
       }
+
       if (!isPaymentFormValid()) {
-        setErrorMessage("Veuillez compléter tous les champs de paiement requis.");
+        setErrorMessage(
+          "Veuillez compléter tous les champs de paiement requis.",
+        );
         return;
       }
     }
@@ -160,7 +226,9 @@ export default function ValiderAbonnementPage() {
         devise,
         mode_paiement: plan.est_gratuit ? null : modePaiement,
         reference_paiement: referencePaiement || null,
-        details_paiement: plan.est_gratuit ? null : buildDetailsPaiement(),
+        details_paiement: plan.est_gratuit
+          ? null
+          : buildDetailsPaiement(),
       });
 
       // Phase de test : on redirige directement vers le dashboard,
@@ -168,10 +236,15 @@ export default function ValiderAbonnementPage() {
       router.push("/dashboard");
     } catch (error: any) {
       if (error.response?.data?.errors) {
-        const flattened = Object.values(error.response.data.errors).flat().join(" ");
+        const flattened = Object.values(error.response.data.errors)
+          .flat()
+          .join(" ");
+
         setErrorMessage(flattened);
       } else {
-        setErrorMessage(error.response?.data?.message || "Une erreur est survenue.");
+        setErrorMessage(
+          error.response?.data?.message || "Une erreur est survenue.",
+        );
       }
     } finally {
       setSubmitting(false);
@@ -190,10 +263,14 @@ export default function ValiderAbonnementPage() {
     return (
       <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-white rounded-3xl shadow-xl p-8 text-center">
-          <h1 className="text-lg font-black text-slate-900 mb-2">Plan introuvable</h1>
+          <h1 className="text-lg font-black text-slate-900 mb-2">
+            Plan introuvable
+          </h1>
+
           <p className="text-sm text-slate-500 mb-6">
-            Le plan demandé n'existe pas ou n'est plus disponible.
+            Le plan demandé n&apos;existe pas ou n&apos;est plus disponible.
           </p>
+
           <Link
             href="/auth/abonnement"
             className="inline-block py-3 px-6 rounded-xl bg-red-light text-white font-bold text-xs uppercase tracking-widest hover:bg-red-700 transition"
@@ -212,30 +289,50 @@ export default function ValiderAbonnementPage() {
           href="/auth/abonnement"
           className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-800 font-bold text-xs uppercase tracking-widest mb-6"
         >
-          <ChevronLeft size={16} /> Changer de plan
+          <ChevronLeft size={16} />
+          Changer de plan
         </Link>
 
         <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 sm:p-8">
           <div className="flex items-center justify-between mb-1">
-            <h1 className="text-xl font-black text-slate-900">{plan.nom}</h1>
+            <h1 className="text-xl font-black text-slate-900">
+              {plan.nom}
+            </h1>
+
             <span className="text-lg font-black text-slate-900">
-              {plan.est_gratuit ? "Gratuit" : `${(plan.prix * quantite).toFixed(2)} ${devise}`}
+              {plan.est_gratuit
+                ? "Gratuit"
+                : `${(plan.prix * quantite).toFixed(2)} ${devise}`}
             </span>
           </div>
-          <p className="text-xs text-slate-500 mb-6">{plan.description}</p>
+
+          <p className="text-xs text-slate-500 mb-6">
+            {plan.description}
+          </p>
 
           {!plan.est_gratuit && (
             <>
               <div className="mb-5">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">
-                  Durée ({QUANTITE_LIMITS[dureeUnite].min} à {QUANTITE_LIMITS[dureeUnite].max}{" "}
-                  {dureeUnite === "jour" ? "jours" : dureeUnite === "annee" ? "années" : "mois"})
+                  Durée ({QUANTITE_LIMITS[dureeUnite].min} à{" "}
+                  {QUANTITE_LIMITS[dureeUnite].max}{" "}
+                  {dureeUnite === "jour"
+                    ? "jours"
+                    : dureeUnite === "annee"
+                      ? "années"
+                      : "mois"}
+                  )
                 </label>
+
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
-                    onClick={() => setQuantite((q) => clampQuantite(q - 1))}
-                    disabled={quantite <= QUANTITE_LIMITS[dureeUnite].min}
+                    onClick={() =>
+                      setQuantite((q) => clampQuantite(q - 1))
+                    }
+                    disabled={
+                      quantite <= QUANTITE_LIMITS[dureeUnite].min
+                    }
                     className="h-11 w-11 shrink-0 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 font-black text-lg hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
                   >
                     −
@@ -246,14 +343,20 @@ export default function ValiderAbonnementPage() {
                     min={QUANTITE_LIMITS[dureeUnite].min}
                     max={QUANTITE_LIMITS[dureeUnite].max}
                     value={quantite}
-                    onChange={(e) => setQuantite(clampQuantite(Number(e.target.value)))}
+                    onChange={(e) =>
+                      setQuantite(clampQuantite(Number(e.target.value)))
+                    }
                     className="flex-1 h-11 text-center rounded-xl bg-slate-50 border border-slate-200 text-sm font-bold outline-none focus:border-red-light"
                   />
 
                   <button
                     type="button"
-                    onClick={() => setQuantite((q) => clampQuantite(q + 1))}
-                    disabled={quantite >= QUANTITE_LIMITS[dureeUnite].max}
+                    onClick={() =>
+                      setQuantite((q) => clampQuantite(q + 1))
+                    }
+                    disabled={
+                      quantite >= QUANTITE_LIMITS[dureeUnite].max
+                    }
                     className="h-11 w-11 shrink-0 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 font-black text-lg hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
                   >
                     +
@@ -270,6 +373,7 @@ export default function ValiderAbonnementPage() {
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">
                   Mode de paiement
                 </label>
+
                 <div className="grid grid-cols-3 gap-2">
                   {MODES_PAIEMENT.map((m) => (
                     <button
@@ -293,30 +397,48 @@ export default function ValiderAbonnementPage() {
                   <input
                     type="text"
                     value={carte.titulaire}
-                    onChange={(e) => setCarte({ ...carte, titulaire: e.target.value })}
+                    onChange={(e) =>
+                      setCarte({
+                        ...carte,
+                        titulaire: e.target.value,
+                      })
+                    }
                     placeholder="Nom du titulaire"
                     className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none focus:border-red-light"
                   />
+
                   <input
                     type="text"
                     inputMode="numeric"
                     maxLength={19}
                     value={carte.numero}
-                    onChange={(e) => setCarte({ ...carte, numero: e.target.value })}
+                    onChange={(e) =>
+                      setCarte({
+                        ...carte,
+                        numero: e.target.value,
+                      })
+                    }
                     placeholder="Numéro de carte"
                     className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none focus:border-red-light"
                   />
+
                   <input
                     type="text"
                     maxLength={5}
                     value={carte.expiration}
-                    onChange={(e) => setCarte({ ...carte, expiration: e.target.value })}
+                    onChange={(e) =>
+                      setCarte({
+                        ...carte,
+                        expiration: e.target.value,
+                      })
+                    }
                     placeholder="MM/AA"
                     className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none focus:border-red-light"
                   />
+
                   <p className="text-[10px] text-slate-400 leading-relaxed">
-                    Pour votre sécurité, le cryptogramme visuel (CVV) n'est jamais demandé
-                    ni stocké ici.
+                    Pour votre sécurité, le cryptogramme visuel (CVV)
+                    n&apos;est jamais demandé ni stocké ici.
                   </p>
                 </div>
               )}
@@ -326,22 +448,30 @@ export default function ValiderAbonnementPage() {
                   <select
                     value={mobileMoney.operateur}
                     onChange={(e) =>
-                      setMobileMoney({ ...mobileMoney, operateur: e.target.value })
+                      setMobileMoney({
+                        ...mobileMoney,
+                        operateur: e.target.value,
+                      })
                     }
                     className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none focus:border-red-light"
                   >
                     <option value="">Choisir un opérateur</option>
+
                     {OPERATEURS_MOBILE_MONEY.map((op) => (
                       <option key={op} value={op}>
                         {op}
                       </option>
                     ))}
                   </select>
+
                   <input
                     type="tel"
                     value={mobileMoney.telephone}
                     onChange={(e) =>
-                      setMobileMoney({ ...mobileMoney, telephone: e.target.value })
+                      setMobileMoney({
+                        ...mobileMoney,
+                        telephone: e.target.value,
+                      })
                     }
                     placeholder="Numéro de téléphone"
                     className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none focus:border-red-light"
@@ -354,21 +484,38 @@ export default function ValiderAbonnementPage() {
                   <input
                     type="text"
                     value={virement.banque}
-                    onChange={(e) => setVirement({ ...virement, banque: e.target.value })}
+                    onChange={(e) =>
+                      setVirement({
+                        ...virement,
+                        banque: e.target.value,
+                      })
+                    }
                     placeholder="Nom de la banque"
                     className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none focus:border-red-light"
                   />
+
                   <input
                     type="text"
                     value={virement.titulaire}
-                    onChange={(e) => setVirement({ ...virement, titulaire: e.target.value })}
+                    onChange={(e) =>
+                      setVirement({
+                        ...virement,
+                        titulaire: e.target.value,
+                      })
+                    }
                     placeholder="Titulaire du compte"
                     className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none focus:border-red-light"
                   />
+
                   <input
                     type="text"
                     value={virement.iban}
-                    onChange={(e) => setVirement({ ...virement, iban: e.target.value })}
+                    onChange={(e) =>
+                      setVirement({
+                        ...virement,
+                        iban: e.target.value,
+                      })
+                    }
                     placeholder="IBAN / RIB"
                     className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none focus:border-red-light"
                   />
@@ -380,10 +527,13 @@ export default function ValiderAbonnementPage() {
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">
                     Référence de la transaction (optionnel)
                   </label>
+
                   <input
                     type="text"
                     value={referencePaiement}
-                    onChange={(e) => setReferencePaiement(e.target.value)}
+                    onChange={(e) =>
+                      setReferencePaiement(e.target.value)
+                    }
                     placeholder="Ex : ID transaction"
                     className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none focus:border-red-light"
                   />
@@ -406,11 +556,27 @@ export default function ValiderAbonnementPage() {
             {submitting
               ? "Traitement..."
               : plan.est_gratuit
-              ? "Passer à l'étape suivante"
-              : "Confirmer ma souscription"}
+                ? "Passer à l'étape suivante"
+                : "Confirmer ma souscription"}
           </button>
         </div>
       </div>
     </div>
+  );
+}
+
+function LoadingPage() {
+  return (
+    <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
+      <Loader2 className="animate-spin text-red-light" size={28} />
+    </div>
+  );
+}
+
+export default function ValiderAbonnementPage() {
+  return (
+    <Suspense fallback={<LoadingPage />}>
+      <ValiderAbonnementContent />
+    </Suspense>
   );
 }
