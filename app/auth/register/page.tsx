@@ -3,7 +3,7 @@
 import axios from "@/lib/axios";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import {
   User,
   Mail,
@@ -43,7 +43,7 @@ const GoogleIcon = () => (
   </svg>
 );
 
-export default function RegisterPage() {
+function RegisterPageContent() {
   const searchParams = useSearchParams();
   const planId = searchParams.get("plan");
 
@@ -70,21 +70,21 @@ export default function RegisterPage() {
       await axios.get("/sanctum/csrf-cookie");
 
       // 2. Créer le compte
-     const response = await axios.post("/api/register", {
-  name,
-  email,
-  password,
-});
+      const response = await axios.post("/api/register", {
+        name,
+        email,
+        password,
+      });
 
-console.log("Inscription réussie :", response.data);
+      console.log("Inscription réussie :", response.data);
 
-setSuccessMessage(
-  "Compte créé avec succès ! Vérifiez votre adresse email pour continuer.",
-);
+      setSuccessMessage(
+        "Compte créé avec succès ! Vérifiez votre adresse email pour continuer.",
+      );
 
-setTimeout(() => {
-  window.location.href = "/auth/verifier-email";
-}, 1500);
+      setTimeout(() => {
+        window.location.href = "/auth/verifier-email";
+      }, 1500);
     } catch (error: any) {
       console.error("Erreur inscription :", error);
 
@@ -322,5 +322,23 @@ setTimeout(() => {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+function LoadingPage() {
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="text-sm font-medium text-slate-500">
+        Chargement...
+      </div>
+    </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<LoadingPage />}>
+      <RegisterPageContent />
+    </Suspense>
   );
 }
