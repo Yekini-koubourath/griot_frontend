@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, {Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -271,7 +271,7 @@ const availableNetworks: SocialNetwork[] = [
    PAGE
 ========================================================= */
 
-export default function ReseauxSociauxPage() {
+function ReseauxSociauxPageContent() {
   const searchParams = useSearchParams();
 
   const [search, setSearch] = useState("");
@@ -909,5 +909,23 @@ function MiniStat({ label, value }: { label: string; value: string }) {
       <p className="text-[8px] font-semibold text-slate-400">{label}</p>
       <p className="mt-1 text-[11px] font-black text-slate-800">{value}</p>
     </div>
+  );
+}
+
+function LoadingPage() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50">
+      <div className="text-sm font-medium text-slate-500">
+        Chargement...
+      </div>
+    </div>
+  );
+}
+
+export default function ReseauxSociauxPage() {
+  return (
+    <Suspense fallback={<LoadingPage />}>
+      <ReseauxSociauxPageContent />
+    </Suspense>
   );
 }
