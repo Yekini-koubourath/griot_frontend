@@ -1,6 +1,6 @@
 "use client";
 
-import axios from "@/lib/axios";
+import axios, { setAuthToken } from "@/lib/axios";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import {
@@ -56,11 +56,18 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await axios.get("/sanctum/csrf-cookie");
-
-      const response = await axios.post("/api/login", { email, password });
+      // Connexion avec email et mot de passe
+      const response = await axios.post("/api/login", {
+        email,
+        password,
+      });
 
       console.log("Connexion réussie :", response.data);
+
+      // Sauvegarder le token Sanctum
+      if (response.data?.token) {
+        setAuthToken(response.data.token);
+      }
 
       const isAdmin = response.data?.user?.role === "admin";
 

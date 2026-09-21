@@ -1,16 +1,6 @@
 import Axios from "axios";
 
-const clearStaleSessionCookies = () => {
-  if (typeof document === "undefined") return;
-
-  const cookieNames = ["laravel_session", "XSRF-TOKEN", "session", "sanctum"];
-
-  cookieNames.forEach((name) => {
-    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax`;
-    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=localhost; SameSite=Lax`;
-    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=127.0.0.1; SameSite=Lax`;
-  });
-};
+const TOKEN_KEY = "griot_token";
 
 const axios = Axios.create({
   baseURL: process.env.NEXT_PUBLIC_BACKEND_URL,
@@ -18,59 +8,53 @@ const axios = Axios.create({
   headers: {
     "X-Requested-With": "XMLHttpRequest",
     Accept: "application/json",
+    "Content-Type": "application/json",
   },
-
-  withCredentials: true,
-
-  withXSRFToken: true,
-
-  xsrfCookieName: "XSRF-TOKEN",
-
-  xsrfHeaderName: "X-XSRF-TOKEN",
 });
 
-axios.interceptors.request.use(async (config) => {
-  const method = config.method?.toLowerCase() ?? "";
+/**
+ * Ajouter automatiquement le token Sanctum
+ * à toutes les requêtes API.
+ */
+axios.interceptors.request.use((config) => {
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem(TOKEN_KEY);
 
-  if (["post", "put", "patch", "delete"].includes(method)) {
-    try {
-      await axios.get("/sanctum/csrf-cookie", {
-        withCredentials: true,
-      });
-    } catch (error) {
-      console.error("Erreur récupération CSRF :", error);
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
   }
 
   return config;
 });
 
-axios.interceptors.response.use(
-  (response) => response,
+/**
+ * Enregistrer le token après connexion/inscription.
+ */
+export const setAuthToken = (token: string) => {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(TOKEN_KEY, token);
+  }
+};
 
-  async (error) => {
-    const shouldRetryCsrf =
-      error.response?.status === 419 &&
-      !error.config?.__isRetry;
+/**
+ * Supprimer le token lors de la déconnexion.
+ */
+export const clearAuthToken = () => {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(TOKEN_KEY);
+  }
+};
 
-    if (shouldRetryCsrf) {
-      error.config.__isRetry = true;
+/**
+ * Récupérer le token actuel.
+ */
+export const getAuthToken = () => {
+  if (typeof window === "undefined") {
+    return null;
+  }
 
-      try {
-        await axios.get("/sanctum/csrf-cookie", {
-          withCredentials: true,
-        });
-
-        return axios(error.config);
-      } catch {
-        return Promise.reject(error);
-      }
-    }
-
-    return Promise.reject(error);
-  },
-);
-
-export { clearStaleSessionCookies };
+  return localStorage.getItem(TOKEN_KEY);
+};
 
 export default axios;

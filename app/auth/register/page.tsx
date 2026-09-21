@@ -1,6 +1,6 @@
 "use client";
 
-import axios from "@/lib/axios";
+import axios, { setAuthToken } from "@/lib/axios";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Suspense, useState } from "react";
@@ -66,10 +66,7 @@ function RegisterPageContent() {
     setLoading(true);
 
     try {
-      // 1. Récupérer le cookie CSRF
-      await axios.get("/sanctum/csrf-cookie");
-
-      // 2. Créer le compte
+      // Créer le compte
       const response = await axios.post("/api/register", {
         name,
         email,
@@ -77,6 +74,11 @@ function RegisterPageContent() {
       });
 
       console.log("Inscription réussie :", response.data);
+
+      // Sauvegarder le token Sanctum
+      if (response.data?.token) {
+        setAuthToken(response.data.token);
+      }
 
       setSuccessMessage(
         "Compte créé avec succès ! Vérifiez votre adresse email pour continuer.",
@@ -102,10 +104,6 @@ function RegisterPageContent() {
             "Veuillez vérifier les informations saisies.",
           );
         }
-      } else if (error.response?.status === 419) {
-        setErrorMessage(
-          "Session CSRF expirée. Veuillez réessayer.",
-        );
       } else {
         setErrorMessage(
           error.response?.data?.message ||
