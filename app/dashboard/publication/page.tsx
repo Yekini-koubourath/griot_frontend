@@ -1158,12 +1158,6 @@ export default function CreatePublicationPage() {
           {/* DROITE */}
 
           <div className="hidden flex-1 items-center justify-end gap-2 md:flex lg:gap-3">
-            <button
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-700"
-              aria-label="Aide"
-            >
-              <HelpCircle size={18} />
-            </button>
 
             <button
               className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-700"

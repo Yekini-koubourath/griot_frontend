@@ -8,7 +8,6 @@ const axios = Axios.create({
   headers: {
     "X-Requested-With": "XMLHttpRequest",
     Accept: "application/json",
-    "Content-Type": "application/json",
   },
 });
 
@@ -23,6 +22,32 @@ axios.interceptors.request.use((config) => {
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+  }
+
+  /*
+   * =========================================================
+   * GESTION DE FORMDATA
+   * =========================================================
+   *
+   * Lorsqu'on envoie une image avec FormData,
+   * il ne faut PAS envoyer :
+   *
+   * Content-Type: application/json
+   *
+   * On laisse le navigateur définir automatiquement :
+   *
+   * multipart/form-data; boundary=...
+   *
+   * Laravel pourra ainsi récupérer correctement
+   * le fichier avec $request->file('avatar').
+   */
+  if (
+    typeof FormData !== "undefined" &&
+    config.data instanceof FormData
+  ) {
+    delete config.headers["Content-Type"];
+  } else {
+    config.headers["Content-Type"] = "application/json";
   }
 
   return config;
@@ -58,3 +83,4 @@ export const getAuthToken = () => {
 };
 
 export default axios;
+
