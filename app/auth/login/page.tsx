@@ -166,12 +166,13 @@ export default function LoginPage() {
                   Mot de passe
                 </label>
 
-                <button
-                  type="button"
-                  className="text-[10px] font-bold text-red-light uppercase tracking-widest"
+                {/* Fix : c'était un bouton mort sans lien ni handler */}
+                <Link
+                  href="/auth/mot-de-passe-oublie"
+                  className="text-[10px] font-bold text-red-light uppercase tracking-widest hover:underline"
                 >
                   Oublié ?
-                </button>
+                </Link>
               </div>
 
               <div className="relative">
