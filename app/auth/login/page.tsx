@@ -49,58 +49,65 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+ const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
 
-    setErrorMessage("");
-    setLoading(true);
+  setErrorMessage("");
+  setLoading(true);
 
-    try {
-      // Connexion avec email et mot de passe
-      const response = await axios.post("/api/login", {
-        email,
-        password,
-      });
+  try {
+    // =========================================================
+    // 1. Récupérer le cookie CSRF Laravel avant la connexion
+    // =========================================================
+    await axios.get("/sanctum/csrf-cookie");
 
-      console.log("Connexion réussie :", response.data);
+    // =========================================================
+    // 2. Connexion avec email et mot de passe
+    // =========================================================
+    const response = await axios.post("/api/login", {
+      email,
+      password,
+    });
 
-      // Sauvegarder le token Sanctum
-      if (response.data?.token) {
-        setAuthToken(response.data.token);
-      }
+    console.log("Connexion réussie :", response.data);
 
-      const isAdmin = response.data?.user?.role === "admin";
-
-      if (isAdmin) {
-        window.location.href = "/admin/dashboard";
-      } else {
-        const check = await axios.get("/api/souscriptions/current");
-        const souscription = check.data?.souscription;
-
-        const estActive =
-          souscription?.statut === "actif" &&
-          (!souscription.date_fin ||
-            new Date(souscription.date_fin) > new Date());
-
-        if (estActive) {
-          window.location.href = "/dashboard";
-        } else if (souscription?.statut === "en_attente") {
-          window.location.href = "/auth/attente";
-        } else {
-          window.location.href = "/auth/abonnement";
-        }
-      }
-    } catch (error: any) {
-      console.error("Erreur de connexion :", error);
-
-      setErrorMessage(
-        error?.response?.data?.message ||
-          "Adresse e-mail ou mot de passe incorrect.",
-      );
-    } finally {
-      setLoading(false);
+    // Sauvegarder le token Sanctum si Laravel en retourne un
+    if (response.data?.token) {
+      setAuthToken(response.data.token);
     }
-  };
+
+    const isAdmin = response.data?.user?.role === "admin";
+
+    if (isAdmin) {
+      window.location.href = "/admin/dashboard";
+    } else {
+      const check = await axios.get("/api/souscriptions/current");
+      const souscription = check.data?.souscription;
+
+      const estActive =
+        souscription?.statut === "actif" &&
+        (!souscription.date_fin ||
+          new Date(souscription.date_fin) > new Date());
+
+      if (estActive) {
+        window.location.href = "/dashboard";
+      } else if (souscription?.statut === "en_attente") {
+        window.location.href = "/auth/attente";
+      } else {
+        window.location.href = "/auth/abonnement";
+      }
+    }
+  } catch (error: any) {
+    console.error("Erreur de connexion :", error);
+
+    setErrorMessage(
+      error?.response?.data?.message ||
+        "Adresse e-mail ou mot de passe incorrect.",
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="relative min-h-screen w-full bg-slate-50 flex items-center justify-center p-4 overflow-hidden">
