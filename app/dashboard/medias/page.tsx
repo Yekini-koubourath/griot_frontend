@@ -42,6 +42,21 @@ const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL ||
   "http://localhost:8000";
 
+const getAuthHeaders = (): Record<string, string> => {
+  if (typeof window === "undefined") {
+    return {
+      Accept: "application/json",
+    };
+  }
+
+  const token = localStorage.getItem("griot_token");
+
+  return {
+    Accept: "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+  
 /* =========================================================
    TYPES
 ========================================================= */
@@ -624,16 +639,16 @@ function MediasPageContent() {
       params.set("sort", sort);
 
       const [mediasResponse, foldersResponse] = await Promise.all([
-        fetch(`${BACKEND_URL}/api/medias?${params.toString()}`, {
-          method: "GET",
-          credentials: "include",
-          headers: { Accept: "application/json" },
-        }),
-        fetch(`${BACKEND_URL}/api/media-folders`, {
-          method: "GET",
-          credentials: "include",
-          headers: { Accept: "application/json" },
-        }),
+      fetch(`${BACKEND_URL}/api/medias?${params.toString()}`, {
+  method: "GET",
+  credentials: "include",
+  headers: getAuthHeaders(),
+}),
+      fetch(`${BACKEND_URL}/api/media-folders`, {
+  method: "GET",
+  credentials: "include",
+  headers: getAuthHeaders(),
+}),
       ]);
 
       if (
@@ -899,17 +914,16 @@ function MediasPageContent() {
             {
               method: "POST",
               credentials: "include",
-              headers: {
-                Accept:
-                  "application/json",
+            headers: {
+  ...getAuthHeaders(),
 
-                ...(xsrfToken
-                  ? {
-                      "X-XSRF-TOKEN":
-                        xsrfToken,
-                    }
-                  : {}),
-              },
+  ...(xsrfToken
+    ? {
+        "X-XSRF-TOKEN":
+          xsrfToken,
+      }
+    : {}),
+},
               body: formData,
             }
           );
@@ -1015,20 +1029,19 @@ function MediasPageContent() {
             {
               method: "POST",
               credentials: "include",
-              headers: {
-                Accept:
-                  "application/json",
+       headers: {
+  ...getAuthHeaders(),
 
-                "Content-Type":
-                  "application/json",
+  "Content-Type":
+    "application/json",
 
-                ...(xsrfToken
-                  ? {
-                      "X-XSRF-TOKEN":
-                        xsrfToken,
-                    }
-                  : {}),
-              },
+  ...(xsrfToken
+    ? {
+        "X-XSRF-TOKEN":
+          xsrfToken,
+      }
+    : {}),
+},
 
               body: JSON.stringify({
                 name,
@@ -1190,17 +1203,16 @@ function MediasPageContent() {
           {
             method: "DELETE",
             credentials: "include",
-            headers: {
-              Accept:
-                "application/json",
+        headers: {
+  ...getAuthHeaders(),
 
-              ...(xsrfToken
-                ? {
-                    "X-XSRF-TOKEN":
-                      xsrfToken,
-                  }
-                : {}),
-            },
+  ...(xsrfToken
+    ? {
+        "X-XSRF-TOKEN":
+          xsrfToken,
+      }
+    : {}),
+},
           }
         );
 
