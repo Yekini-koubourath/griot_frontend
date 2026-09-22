@@ -6,7 +6,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-
+import GriotAiChat from "../component/ai/GriotAiChat";
 import {
   Bell,
   ChevronDown,
@@ -324,6 +324,26 @@ function getProjectInitials(name: string) {
 ========================================================= */
 
 export default function CreatePublicationPage() {
+
+  const [showAiChat, setShowAiChat] = useState(false);
+  const handleUseAiContent = (content: string) => {
+  setIdea(content);
+
+  setPosts((current) => {
+    const updated = { ...current };
+
+    selectedNetworks.forEach((networkId) => {
+      updated[networkId] = {
+        text: content,
+        image: current[networkId]?.image ?? null,
+      };
+    });
+
+    return updated;
+  });
+
+  setShowAiChat(false);
+};
   /* =======================================================
      PROJETS (depuis Laravel)
   ======================================================= */
@@ -1308,6 +1328,20 @@ export default function CreatePublicationPage() {
                   <span className="text-red-500"> *</span>
                 </label>
 
+<div className="mb-2 flex items-center justify-between gap-2">
+  <span className="text-[9px] font-medium text-slate-400">
+    Décrivez simplement ce que vous voulez publier.
+  </span>
+
+  <button
+    type="button"
+    onClick={() => setShowAiChat(true)}
+    className="flex shrink-0 items-center gap-1.5 rounded-lg bg-red-dark px-2.5 py-2 text-[8px] font-black text-white shadow-sm transition hover:bg-red-dark/90"
+  >
+    <Sparkles size={11} />
+    Créer avec Griot AI
+  </button>
+</div>
                 <div className="relative">
                   <textarea
                     value={idea}
@@ -1813,6 +1847,12 @@ export default function CreatePublicationPage() {
           </button>
         </div>
       </main>
+      <GriotAiChat
+  open={showAiChat}
+  onClose={() => setShowAiChat(false)}
+  idea={idea}
+  onUseContent={handleUseAiContent}
+/>
     </div>
   );
 }
