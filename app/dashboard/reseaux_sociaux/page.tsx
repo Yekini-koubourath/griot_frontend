@@ -68,7 +68,15 @@ type CompteSocial = {
 const oauthNetworks = ["facebook", "tiktok"];
 
 function getOAuthUrl(networkId: string, projectId: string) {
-  return `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/${networkId}/redirect/${projectId}`;
+  const token = localStorage.getItem("griot_token");
+
+  const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/${networkId}/redirect/${projectId}`;
+
+  if (!token) {
+    return `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/login?erreur=non_connecte`;
+  }
+
+  return `${url}?token=${encodeURIComponent(token)}`;
 }
 
 /* =========================================================
@@ -278,8 +286,32 @@ function ReseauxSociauxPageContent() {
   const [comptesSociaux, setComptesSociaux] = useState<CompteSocial[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddNetwork, setShowAddNetwork] = useState(false);
+  const [selectedNetworksForReturn, setSelectedNetworksForReturn] =
+    useState<string[]>([]);
 
   const projectId = searchParams.get("project");
+  const returnTo = searchParams.get("returnTo");
+  const [publicationReturnTo, setPublicationReturnTo] =
+    useState<string | null>(returnTo);
+
+  useEffect(() => {
+    if (returnTo) {
+      setPublicationReturnTo(returnTo);
+      sessionStorage.setItem(
+        "griot_social_return_to_publication",
+        returnTo
+      );
+      return;
+    }
+
+    const storedReturnTo = sessionStorage.getItem(
+      "griot_social_return_to_publication"
+    );
+
+    if (storedReturnTo) {
+      setPublicationReturnTo(storedReturnTo);
+    }
+  }, [returnTo]);
 
   /* =========================================================
      CHARGER LES COMPTES DU PROJET
@@ -366,6 +398,13 @@ function ReseauxSociauxPageContent() {
   const handleConnect = (networkId: string) => {
     if (!projectId) return;
 
+    if (publicationReturnTo) {
+      sessionStorage.setItem(
+        "griot_social_return_to_publication",
+        publicationReturnTo
+      );
+    }
+
     if (oauthNetworks.includes(networkId)) {
       window.location.href = getOAuthUrl(networkId, projectId);
       return;
@@ -376,6 +415,31 @@ function ReseauxSociauxPageContent() {
     window.alert(
       `La connexion ${network?.name ?? networkId} sera bientôt disponible.`
     );
+  };
+
+  const handleSelectNetworkForReturn = (networkId: string) => {
+    setSelectedNetworksForReturn((current) =>
+      current.includes(networkId)
+        ? current.filter((id) => id !== networkId)
+        : [...current, networkId]
+    );
+  };
+
+  const handleAddSelectedNetworkToPublication = () => {
+    if (!publicationReturnTo || selectedNetworksForReturn.length === 0) {
+      return;
+    }
+
+    const separator = publicationReturnTo.includes("?") ? "&" : "?";
+    const target = `${publicationReturnTo}${separator}fromNetworks=1&networks=${encodeURIComponent(
+      selectedNetworksForReturn.join(",")
+    )}`;
+
+    sessionStorage.removeItem(
+      "griot_social_return_to_publication"
+    );
+
+    window.location.href = target;
   };
 
   return (
@@ -445,6 +509,35 @@ function ReseauxSociauxPageContent() {
             </button>
           </div>
         </section>
+
+        {publicationReturnTo && projectId && (
+          <section className="mb-6 rounded-2xl border border-red-100 bg-red-50/70 px-4 py-4 shadow-sm sm:px-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-wide text-red-dark">
+                  Retour vers la création de publication
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                  Sélectionnez un ou plusieurs réseaux déjà connectés, puis cliquez sur « Continuer la publication ».
+                </p>
+              </div>
+              <div className="shrink-0 rounded-xl bg-white px-3 py-2 text-[9px] font-bold text-slate-500 shadow-sm">
+                {selectedNetworksForReturn.length > 0
+                  ? `${selectedNetworksForReturn.length} réseau${selectedNetworksForReturn.length > 1 ? "x" : ""} sélectionné${selectedNetworksForReturn.length > 1 ? "s" : ""}`
+                  : "Aucun réseau sélectionné"}
+              </div>
+              <button
+                type="button"
+                disabled={selectedNetworksForReturn.length === 0}
+                onClick={handleAddSelectedNetworkToPublication}
+                className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-[10px] font-black text-white shadow-md shadow-red-600/15 transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ArrowUpRight size={14} />
+                Continuer la publication
+              </button>
+            </div>
+          </section>
+        )}
 
         {/* =====================================================
             STATISTIQUES
@@ -546,6 +639,10 @@ function ReseauxSociauxPageContent() {
               network={network}
               projectId={projectId}
               onConnect={handleConnect}
+              returnTo={publicationReturnTo}
+              selectedForReturn={selectedNetworksForReturn.includes(network.id)}
+              onSelectForReturn={handleSelectNetworkForReturn}
+              onAddSelectedNetwork={handleAddSelectedNetworkToPublication}
             />
           ))}
         </section>
@@ -752,10 +849,18 @@ function NetworkCard({
   network,
   projectId,
   onConnect,
+  returnTo,
+  selectedForReturn,
+  onSelectForReturn,
+  onAddSelectedNetwork,
 }: {
   network: SocialNetwork;
   projectId: string | null;
   onConnect: (networkId: string) => void;
+  returnTo: string | null;
+  selectedForReturn: boolean;
+  onSelectForReturn: (networkId: string) => void;
+  onAddSelectedNetwork: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -858,22 +963,50 @@ function NetworkCard({
 
       <div className="mt-4 flex gap-2">
         {isConnected ? (
-          <>
-            <button
-              type="button"
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 py-2.5 text-[10px] font-bold text-slate-600 transition hover:bg-slate-50"
-            >
-              <Settings2 size={14} />
-              Gérer le compte
-            </button>
+          returnTo ? (
+            <div className="flex w-full gap-2">
+              <button
+                type="button"
+                onClick={() => onSelectForReturn(network.id)}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-xl border py-2.5 text-[10px] font-black transition ${
+                  selectedForReturn
+                    ? "border-red-200 bg-red-50 text-red-dark"
+                    : "border-slate-200 text-slate-600 hover:border-red-200 hover:bg-red-50"
+                }`}
+              >
+                <CheckCircle2 size={14} />
+                {selectedForReturn ? "Réseau sélectionné" : "Sélectionner"}
+              </button>
 
-            <button
-              type="button"
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
-            >
-              <RefreshCw size={14} />
-            </button>
-          </>
+              {selectedForReturn && (
+                <button
+                  type="button"
+                  onClick={onAddSelectedNetwork}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-600 py-2.5 text-[10px] font-black text-white shadow-md shadow-red-600/15 transition hover:bg-red-700"
+                >
+                  <Link2 size={14} />
+                  Continuer la publication
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 py-2.5 text-[10px] font-bold text-slate-600 transition hover:bg-slate-50"
+              >
+                <Settings2 size={14} />
+                Gérer le compte
+              </button>
+
+              <button
+                type="button"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+              >
+                <RefreshCw size={14} />
+              </button>
+            </>
+          )
         ) : needsAttention ? (
           <button
             type="button"
