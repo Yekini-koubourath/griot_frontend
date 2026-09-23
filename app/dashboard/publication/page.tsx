@@ -1333,14 +1333,6 @@ export default function CreatePublicationPage() {
     Décrivez simplement ce que vous voulez publier.
   </span>
 
-  <button
-    type="button"
-    onClick={() => setShowAiChat(true)}
-    className="flex shrink-0 items-center gap-1.5 rounded-lg bg-red-dark px-2.5 py-2 text-[8px] font-black text-white shadow-sm transition hover:bg-red-dark/90"
-  >
-    <Sparkles size={11} />
-    Créer avec Griot AI
-  </button>
 </div>
                 <div className="relative">
                   <textarea
@@ -1553,32 +1545,21 @@ export default function CreatePublicationPage() {
                 </div>
               )}
 
-              <button
-                type="button"
-                onClick={() => {
-                  if (!idea.trim()) {
-                    window.alert("Écrivez d'abord une idée ou un sujet.");
-                    return;
-                  }
+          <button
+  type="button"
+  onClick={() => {
+    if (!idea.trim()) {
+      window.alert("Écrivez d'abord une idée ou un sujet.");
+      return;
+    }
 
-                  setPosts((current) => {
-                    const updated = { ...current };
-
-                    activeProject.networks.forEach((network) => {
-                      updated[network.id] = {
-                        text: idea,
-                        image: current[network.id]?.image ?? null,
-                      };
-                    });
-
-                    return updated;
-                  });
-                }}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-red-dark py-3 text-[10px] font-black uppercase tracking-[0.06em] text-white shadow-[0_8px_20px_rgba(0,0,0,0.12)] transition hover:bg-red-dark/90 active:scale-[0.99]"
-              >
-                <Sparkles size={14} />
-                Générer le contenu
-              </button>
+    setShowAiChat(true);
+  }}
+  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-red-dark py-3 text-[10px] font-black uppercase tracking-[0.06em] text-white shadow-[0_8px_20px_rgba(0,0,0,0.12)] transition hover:bg-red-dark/90 active:scale-[0.99]"
+>
+  <Sparkles size={14} />
+  Générer le contenu
+</button>
             </section>
           </div>
 
@@ -1847,7 +1828,7 @@ export default function CreatePublicationPage() {
           </button>
         </div>
       </main>
-      <GriotAiChat
+    <GriotAiChat
   open={showAiChat}
   onClose={() => setShowAiChat(false)}
   idea={idea}
