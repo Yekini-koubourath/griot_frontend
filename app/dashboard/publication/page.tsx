@@ -1742,7 +1742,7 @@ export default function CreatePublicationPage() {
           );
 
           window.location.href =
-            "/dashboard/publications";
+            "/dashboard/mes_publications";
 
           return;
         }
@@ -1791,7 +1791,7 @@ export default function CreatePublicationPage() {
         }
 
         window.location.href =
-          "/dashboard/publications";
+          "/dashboard/mes_publications";
       } catch (error: any) {
         console.error(
           "Impossible de sauvegarder la publication :",
@@ -1913,7 +1913,7 @@ export default function CreatePublicationPage() {
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <a
-                href="/dashboard/publications"
+                href="/dashboard/mes_publications"
                 className="text-[10px] font-semibold text-slate-400 transition hover:text-slate-700"
               >
                 Publications
@@ -3336,12 +3336,12 @@ function FacebookPreview({
             <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 text-white">
               <ThumbsUp size={8} />
             </span>
-            128
+            0
           </span>
 
           <span>
-            12 commentaires ·
-            8 partages
+            0 commentaires ·
+            0 partages
           </span>
         </div>
 

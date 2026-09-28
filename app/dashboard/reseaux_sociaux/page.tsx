@@ -374,6 +374,28 @@ const flash =
     chargerComptesSociaux();
   }, [projectId]);
 
+  useEffect(() => {
+  if (!publicationReturnTo || comptesSociaux.length === 0) return;
+
+  const justConnected =
+    facebookStatus === "connected" ? "facebook" : connecte;
+
+  if (!justConnected) return;
+
+  const isActive = comptesSociaux.some(
+    (compte) =>
+      compte.reseau === justConnected && compte.statut === "actif"
+  );
+
+  if (isActive) {
+    setSelectedNetworksForReturn((current) =>
+      current.includes(justConnected)
+        ? current
+        : [...current, justConnected]
+    );
+  }
+}, [comptesSociaux, publicationReturnTo, facebookStatus, connecte]);
+
   /* =========================================================
      TRANSFORMER LES DONNÉES BACKEND EN CARTES
   ========================================================= */
@@ -449,22 +471,23 @@ const flash =
     );
   };
 
-  const handleAddSelectedNetworkToPublication = () => {
-    if (!publicationReturnTo || selectedNetworksForReturn.length === 0) {
-      return;
-    }
+ const handleAddSelectedNetworkToPublication = () => {
+  if (selectedNetworksForReturn.length === 0) return;
 
-    const separator = publicationReturnTo.includes("?") ? "&" : "?";
-    const target = `${publicationReturnTo}${separator}fromNetworks=1&networks=${encodeURIComponent(
-      selectedNetworksForReturn.join(",")
-    )}`;
+  const base =
+    publicationReturnTo ||
+    `/dashboard/publication${projectId ? `?project=${projectId}` : ""}`;
 
-    sessionStorage.removeItem(
-      "griot_social_return_to_publication"
-    );
+  const separator = base.includes("?") ? "&" : "?";
 
-    window.location.href = target;
-  };
+  const target = `${base}${separator}fromNetworks=1&networks=${encodeURIComponent(
+    selectedNetworksForReturn.join(",")
+  )}`;
+
+  sessionStorage.removeItem("griot_social_return_to_publication");
+
+  window.location.href = target;
+};
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -486,7 +509,11 @@ const flash =
 
           <div className="flex items-center gap-2">
             <Link
-              href="/dashboard/publication"
+              href={
+  projectId
+    ? `/dashboard/publication?project=${projectId}`
+    : "/dashboard/publication"
+}
               className="hidden items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-[10px] font-black uppercase tracking-wide text-white shadow-lg shadow-red-600/20 transition hover:bg-red-700 sm:flex"
             >
               <Plus size={15} />
