@@ -291,6 +291,30 @@ function ReseauxSociauxPageContent() {
 
   const projectId = searchParams.get("project");
   const returnTo = searchParams.get("returnTo");
+
+
+  const facebookStatus = searchParams.get("facebook");
+const erreur = searchParams.get("erreur");
+const connecte = searchParams.get("connecte");
+
+const flashMessages: Record<string, string> = {
+  connected: "Facebook connecté avec succès.",
+  no_page: "Aucune Page Facebook trouvée. Créez une Page ou sélectionnez-la lors de l'autorisation.",
+  token_error: "Échec de l'échange du code Facebook.",
+  pages_error: "Impossible de récupérer vos Pages Facebook.",
+  invalid_state: "Session expirée, réessayez.",
+  cancelled: "Connexion annulée.",
+  error: "Erreur lors de la connexion Facebook.",
+};
+
+const flash =
+  (facebookStatus && flashMessages[facebookStatus]) ||
+  (connecte === "tiktok" && "TikTok connecté avec succès.") ||
+  (erreur && `Erreur : ${erreur}`) ||
+  null;
+
+
+
   const [publicationReturnTo, setPublicationReturnTo] =
     useState<string | null>(returnTo);
 
@@ -481,6 +505,11 @@ function ReseauxSociauxPageContent() {
       ===================================================== */}
 
       <main className="mx-auto max-w-[1500px] p-4 sm:p-6 lg:p-8">
+        {flash && (
+  <div className="mb-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-semibold text-slate-700">
+    {flash}
+  </div>
+)}
         {/* =====================================================
             INTRO
         ===================================================== */}
