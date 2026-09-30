@@ -65,12 +65,15 @@ type CompteSocial = {
       /auth/{id}/redirect/{projectId} existe côté Laravel
 ========================================================= */
 
-const oauthNetworks = ["facebook", "tiktok"];
+const oauthNetworks = ["facebook", "tiktok", "instagram"];
 
 function getOAuthUrl(networkId: string, projectId: string) {
   const token = localStorage.getItem("griot_token");
 
-  const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/${networkId}/redirect/${projectId}`;
+  // Instagram est géré par le même endpoint que Facebook (même app Meta)
+  const authNetwork = networkId === "instagram" ? "facebook" : networkId;
+
+  const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/${authNetwork}/redirect/${projectId}`;
 
   if (!token) {
     return `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/login?erreur=non_connecte`;
@@ -374,26 +377,32 @@ const flash =
     chargerComptesSociaux();
   }, [projectId]);
 
-  useEffect(() => {
+useEffect(() => {
   if (!publicationReturnTo || comptesSociaux.length === 0) return;
 
-  const justConnected =
-    facebookStatus === "connected" ? "facebook" : connecte;
+  const justConnectedIds: string[] = [];
 
-  if (!justConnected) return;
+  if (facebookStatus === "connected") {
+    justConnectedIds.push("facebook", "instagram");
+  } else if (connecte === "tiktok") {
+    justConnectedIds.push("tiktok");
+  }
 
-  const isActive = comptesSociaux.some(
-    (compte) =>
-      compte.reseau === justConnected && compte.statut === "actif"
+  if (justConnectedIds.length === 0) return;
+
+  const activeIds = justConnectedIds.filter((id) =>
+    comptesSociaux.some(
+      (compte) => compte.reseau === id && compte.statut === "actif"
+    )
   );
 
-  if (isActive) {
-    setSelectedNetworksForReturn((current) =>
-      current.includes(justConnected)
-        ? current
-        : [...current, justConnected]
-    );
-  }
+  if (activeIds.length === 0) return;
+
+  setSelectedNetworksForReturn((current) => {
+    const merged = new Set(current);
+    activeIds.forEach((id) => merged.add(id));
+    return Array.from(merged);
+  });
 }, [comptesSociaux, publicationReturnTo, facebookStatus, connecte]);
 
   /* =========================================================
